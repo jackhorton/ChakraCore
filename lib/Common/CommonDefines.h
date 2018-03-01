@@ -119,7 +119,7 @@
 #else
 #error "No ICU version information"
 #endif
-#else
+#elif !defined(HAS_ICU)
 #define ICU_VERSION -1
 #endif
 

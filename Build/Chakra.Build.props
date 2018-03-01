@@ -25,9 +25,16 @@
     <!-- ARM does not support ICU until we figure out how to link icudtXXl.dat without genccode.exe -->
     <ChakraICU Condition="'$(Platform)'=='ARM'">false</ChakraICU>
 
+    <WindowsICU Condition="'$(WindowsICU)'==''">false</WindowsICU>
+
     <UseICU Condition="'$(UseICU)'==''">false</UseICU>
     <UseICU Condition="'$(BuildLite)'=='true'">false</UseICU>
-    <UseICU Condition="'$(ChakraICU)'!='false'">true</UseICU>
+    <UseICU Condition="'$(ChakraICU)'!='false' OR '$(WindowsICU)'=='true'">true</UseICU>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(WindowsICU)'=='true'">
+    <IcuVersionMajor Condition="'$(WindowsTargetPlatformVersion)'=='10.0.15063.0'">57</IcuVersionMajor>
+    <IcuVersionMajor Condition="'$(WindowsTargetPlatformVersion)'=='10.0.16299.0'">59</IcuVersionMajor>
+    <IcuLibraryDependencies>icuuc.lib;icuin.lib</IcuLibraryDependencies>
   </PropertyGroup>
   <Import Condition="'$(ChakraICU)'!='false' AND exists('$(ChakraCoreRootDirectory)deps\Chakra.ICU\Chakra.ICU.props')" Project="$(ChakraCoreRootDirectory)deps\Chakra.ICU\Chakra.ICU.props" />
   <ItemDefinitionGroup>
@@ -53,7 +60,9 @@
       </PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(UseICU)'=='true'">
         %(PreprocessorDefinitions);
-        HAS_ICU
+        HAS_ICU;
+        U_DISABLE_RENAMING=1; <!-- Disable renaming to maintain compatibility with Windows Kit ICU's icuuc/icuin.lib -->
+        ICU_VERSION=$(IcuVersionMajor)
       </PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(EnableIntl)'=='true' AND '$(UseICU)'=='true'">
         %(PreprocessorDefinitions);
@@ -63,10 +72,9 @@
         %(PreprocessorDefinitions);
         U_STATIC_IMPLEMENTATION=1
       </PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(UseICU)'=='true'">
-        U_DISABLE_RENAMING=1; <!-- Disable renaming to maintain compatibility with Windows Kit ICU's icuuc/icuin.lib -->
-        ICU_VERSION=$(IcuVersionMajor);
-        %(PreprocessorDefinitions)
+      <PreprocessorDefinitions Condition="'$(WindowsICU)'=='true'">
+        %(PreprocessorDefinitions);
+        WINDOWS10_ICU
       </PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(ForceSWB)'=='true'">
         %(PreprocessorDefinitions);
