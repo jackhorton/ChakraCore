@@ -501,20 +501,6 @@
   </test>
   <test>
     <default>
-      <files>normalize.js</files>
-      <baseline>normalize.baseline</baseline>
-      <tags>exclude_noicu</tags>
-      <compile-flags> -ES6Unicode</compile-flags>
-    </default>
-  </test>
-  <test>
-    <default>
-      <files>normalizeProp.js</files>
-      <baseline>normalizeProp.baseline</baseline>
-    </default>
-  </test>
-  <test>
-    <default>
       <files>unicode_escape_sequences.js</files>
       <baseline>unicode_escape_sequences.baseline</baseline>
       <compile-flags> -ES6Unicode -ES6RegExSticky</compile-flags>

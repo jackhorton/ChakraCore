@@ -165,6 +165,8 @@ var testRunner = function testRunner() {
 
             if (options && options.hasOwnProperty("verbose")) {
                 _verbose = options.verbose;
+            } else if (WScript.Arguments.includes("summary")) {
+                _verbose = false;
             }
 
             for (var i in testsToRun) {
