@@ -550,8 +550,9 @@ PHASE(All)
 #define DEFAULT_CONFIG_LdChakraLib             (false)
 #define DEFAULT_CONFIG_EntryPointInfoRpcData   (false)
 
-// ES6 DEFAULT BEHAVIOR
-#define DEFAULT_CONFIG_ES6                     (true)  // master flag to gate all P0-spec-test compliant ES6 features
+// ES version default behavior
+#define DEFAULT_CONFIG_ES6                     (true) // master flag to gate all P0-spec-test compliant ES6 features
+#define DEFAULT_CONFIG_ESStage3                (false)
 
 //CollectGarbage is legacy IE specific global function disabled in Microsoft Edge.
 #define DEFAULT_CONFIG_CollectGarbage          (false)
@@ -626,6 +627,10 @@ PHASE(All)
 
 #define DEFAULT_CONFIG_ES6Verbose              (false)
 #define DEFAULT_CONFIG_ES6All                  (false)
+
+// Non-final ES proposals
+#define DEFAULT_CONFIG_ESOptionalCatchBinding  (false)
+
 // ES6 DEFAULT BEHAVIOR
 
 #define DEFAULT_CONFIG_AsyncDebugging           (true)
@@ -1032,6 +1037,7 @@ FLAGNR(Boolean, LdChakraLib           , "Access to the Chakra internal library w
 
 // Master ES6 flag to enable STABLE ES6 features/flags
 FLAGR(Boolean, ES6                         , "Enable ES6 stable features",                        DEFAULT_CONFIG_ES6)
+FLAGR(Boolean, ESStage3                    , "Enable ECMAScript Stage 3 proposals",               DEFAULT_CONFIG_ESStage3)
 
 // Master ES6 flag to enable ALL sub ES6 features/flags
 FLAGNRC(Boolean, ES6All                    , "Enable all ES6 features, both stable and unstable", DEFAULT_CONFIG_ES6All)
@@ -1113,9 +1119,7 @@ FLAGPR           (Boolean, ES6, ESObjectGetOwnPropertyDescriptors, "Enable Objec
 #endif
 FLAGPR_REGOVR_EXP(Boolean, ES6, ESSharedArrayBuffer    , "Enable SharedArrayBuffer"                                 , DEFAULT_CONFIG_ESSharedArrayBuffer)
 
-// /ES6 (BLUE+1) features/flags
-
-
+FLAGPR(Boolean, ESStage3, ESOptionalCatchBinding, "Enable Optional Catch Binding support", DEFAULT_CONFIG_ESOptionalCatchBinding)
 
 #ifdef ENABLE_PROJECTION
 FLAGNR(Boolean, WinRTDelegateInterfaces , "Treat WinRT Delegates as Interfaces when determining their resolvability.", DEFAULT_CONFIG_WinRTDelegateInterfaces)

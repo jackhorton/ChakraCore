@@ -9550,7 +9550,7 @@ template<bool buildAST>
 ParseNodePtr Parser::ParseCatch()
 {
     ParseNodePtr rootNode = nullptr;
-    ParseNodePtr* ppnode = &rootNode;
+    ParseNodePtr *ppnode = &rootNode;
     ParseNodePtr *ppnodeExprScopeSave = nullptr;
     ParseNodePtr pnode = nullptr;
     ParseNodePtr pnodeCatchScope = nullptr;
@@ -9564,16 +9564,27 @@ ParseNodePtr Parser::ParseCatch()
         {
             ichMin = this->GetScanner()->IchMinTok();
         }
+
         this->GetScanner()->Scan(); //catch
-        ChkCurTok(tkLParen, ERRnoLparen); //catch(
 
         bool isPattern = false;
-        if (tkID != m_token.tk)
+        bool hasBinding = true;
+        if (m_token.tk == tkLCurly)
         {
-            isPattern = IsES6DestructuringEnabled() && IsPossiblePatternStart();
-            if (!isPattern)
+            // if we immediately encounter a curly, dont Scan(), as it will be consumed by ParseStatement below
+            hasBinding = false;
+        }
+        else
+        {
+            ChkCurTok(tkLParen, ERRnoLparen); //catch(
+
+            if (tkID != m_token.tk)
             {
-                IdentifierExpectedError(m_token);
+                isPattern = IsES6DestructuringEnabled() && IsPossiblePatternStart();
+                if (!isPattern)
+                {
+                    IdentifierExpectedError(m_token);
+                }
             }
         }
 
@@ -9623,7 +9634,7 @@ ParseNodePtr Parser::ParseCatch()
                 pnode->AsParseNodeCatch()->scope = scope;
             }
         }
-        else
+        else if (hasBinding)
         {
             if (IsStrictMode())
             {
@@ -9667,17 +9678,31 @@ ParseNodePtr Parser::ParseCatch()
 
             this->GetScanner()->Scan();
         }
+        else
+        {
+            Assert(!hasBinding);
+
+            if (buildAST)
+            {
+                Scope *scope = pnodeCatchScope->AsParseNodeBlock()->scope;
+                pnode->AsParseNodeCatch()->scope = scope;
+            }
+        }
 
         charcount_t ichLim;
         if (buildAST)
         {
             ichLim = this->GetScanner()->IchLimTok();
         }
-        ChkCurTok(tkRParen, ERRnoRparen); //catch(id[:expr])
 
-        if (tkLCurly != m_token.tk)
+        if (hasBinding)
         {
-            Error(ERRnoLcurly);
+            ChkCurTok(tkRParen, ERRnoRparen); //catch(id[:expr])
+
+            if (tkLCurly != m_token.tk)
+            {
+                Error(ERRnoLcurly);
+            }
         }
 
         ParseNodePtr pnodeBody = ParseStatement<buildAST>();  //catch(id[:expr]) {block}

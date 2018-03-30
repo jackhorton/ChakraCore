@@ -264,6 +264,11 @@
 </dir>
 <dir>
   <default>
+    <files>Stage3</files>
+  </default>
+</dir>
+<dir>
+  <default>
     <files>switchStatement</files>
   </default>
 </dir>
