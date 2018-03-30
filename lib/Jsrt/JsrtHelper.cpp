@@ -132,23 +132,23 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
         HMODULE mod = GetModuleHandleW(NULL);
         AutoSystemInfo::SaveModuleFileName(mod);
 
-    #if defined(_M_IX86) && !defined(__clang__)
+#if defined(_M_IX86) && !defined(__clang__)
         // Enable SSE2 math functions in CRT if SSE2 is available
-    #pragma prefast(suppress:6031, "We don't require SSE2, but will use it if available")
+#pragma prefast(suppress:6031, "We don't require SSE2, but will use it if available")
         _set_SSE2_enable(TRUE);
-    #endif
+#endif
 
         {
             CmdLineArgsParser parser;
             ConfigParser::ParseOnModuleLoad(parser, mod);
         }
 
-    #if defined(ENABLE_JS_ETW) && !defined(ENABLE_JS_LTTNG)
+#if defined(ENABLE_JS_ETW) && !defined(ENABLE_JS_LTTNG)
         EtwTrace::Register();
-    #endif
-    #ifdef VTUNE_PROFILING
+#endif
+#ifdef VTUNE_PROFILING
         VTuneChakraProfile::Register();
-    #endif
+#endif
 #if PERFMAP_TRACE_ENABLED
         PlatformAgnostic::PerfTrace::Register();
 #endif
@@ -156,13 +156,13 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
         ValueType::Initialize();
         ThreadContext::GlobalInitialize();
 
-    #ifdef ENABLE_BASIC_TELEMETRY
+#ifdef ENABLE_BASIC_TELEMETRY
         g_TraceLoggingClient = NoCheckHeapNewStruct(TraceLoggingClient);
-    #endif
+#endif
 
-    #ifdef DYNAMIC_PROFILE_STORAGE
+#ifdef DYNAMIC_PROFILE_STORAGE
         DynamicProfileStorage::Initialize();
-    #endif
+#endif
 
         return true;
     }
@@ -182,9 +182,9 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
         if (s_threadWasEntered) return;
         s_threadWasEntered = true;
 
-    #ifdef HEAP_TRACK_ALLOC
+#ifdef HEAP_TRACK_ALLOC
         HeapAllocator::InitializeThread();
-    #endif
+#endif
 
 #ifndef _WIN32
         // put something into key to make sure destructor is going to be called

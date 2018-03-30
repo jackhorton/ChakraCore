@@ -60,6 +60,10 @@
         %(PreprocessorDefinitions);
         ICU_VERSION=$(IcuVersionMajor)
       </PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(ChakraStaticLibrary)'=='true'">
+        %(PreprocessorDefinitions);
+        CHAKRA_STATIC_LIBRARY=1
+      </PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(ForceSWB)'=='true'">
         %(PreprocessorDefinitions);
         GLOBAL_ENABLE_WRITE_BARRIER=1

@@ -9,7 +9,8 @@
     <TargetName>ChakraCore</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType Condition="'$(ChakraStaticLibrary)'!='true'">DynamicLibrary</ConfigurationType>
+    <ConfigurationType Condition="'$(ChakraStaticLibrary)'=='true'">StaticLibrary</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(BuildConfigPropsPath)Chakra.Build.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

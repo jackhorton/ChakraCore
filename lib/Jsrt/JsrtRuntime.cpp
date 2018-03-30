@@ -61,7 +61,7 @@ void JsrtRuntime::Uninitialize()
         tmpThreadContext = currentThreadContext;
         currentThreadContext = currentThreadContext->Next();
 
-#ifdef CHAKRA_STATIC_LIBRARY
+#if defined(CHAKRA_STATIC_LIBRARY) && !defined(_WIN32)
         // xplat-todo: Cleanup staticlib shutdown. This only shuts down threads.
         // Other closing contexts / finalizers having trouble with current
         // runtime/context.
