@@ -3,11 +3,11 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-WScript.LoadScriptFile("..\\UnitTestFramework\\UnitTestFramework.js");
+import { runTests, assert } from "./IntlHarness.js";
 
 const constructors = [Intl.Collator, Intl.NumberFormat, Intl.DateTimeFormat];
 
-testRunner.runTests([
+runTests([
     {
         name: "OSS-Fuzz #6657: stress uloc_forLanguageTag status code and parsed length on duplicate variant subtags",
         body() {
@@ -41,4 +41,4 @@ testRunner.runTests([
             }
         }
     }
-], { verbose: false });
+]);

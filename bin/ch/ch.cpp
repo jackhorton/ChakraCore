@@ -783,6 +783,16 @@ HRESULT ExecuteTest(const char* fileName)
         {
             CreateAndRunSerializedScript(fileName, fileContents, lengthBytes, WScriptJsrt::FinalizeFree, fullPath);
         }
+        else if (HostConfigFlags::flags.ModuleEntry)
+        {
+            free((void *)fileContents);
+            char *moduleContents = (char *) malloc(_MAX_FNAME * 2);
+            char moduleFileName[_MAX_FNAME];
+            char moduleExtension[_MAX_EXT];
+            _splitpath_s(fullPath, nullptr, 0, nullptr, 0, moduleFileName, _MAX_FNAME, moduleExtension, _MAX_EXT);
+            int moduleContentsLength = snprintf(moduleContents, _MAX_FNAME * 2, "WScript.LoadScriptFile(String.raw`%s%s`, 'module');", moduleFileName, moduleExtension);
+            IfFailGo(RunScript(fileName, moduleContents, moduleContentsLength, WScriptJsrt::FinalizeFree, nullptr, fullPath));
+        }
         else
         {
             IfFailGo(RunScript(fileName, fileContents, lengthBytes, WScriptJsrt::FinalizeFree, nullptr, fullPath));

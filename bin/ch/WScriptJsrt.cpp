@@ -328,53 +328,51 @@ JsValueRef WScriptJsrt::LoadScriptHelper(JsValueRef callee, bool isConstructCall
     JsErrorCode errorCode = JsNoError;
     LPCWSTR errorMessage = _u("");
     JsValueRef returnValue = JS_INVALID_REFERENCE;
+    AutoString fileContent;
+    char *fileNameNarrow = nullptr;
+    AutoString fileName;
+    AutoString scriptInjectType;
+    char fileNameBuffer[MAX_PATH];
+    bool isFile = true;
 
     if (argumentCount < 2 || argumentCount > 4)
     {
         errorCode = JsErrorInvalidArgument;
         errorMessage = _u("Need more or fewer arguments for WScript.LoadScript");
+        goto Error;
     }
-    else
+
+    IfJsrtErrorSetGo(fileContent.Initialize(arguments[1]));
+    // ExternalArrayBuffer Finalize will clean this up
+    // but only if we actually register a finalizecallback for this
+    fileContent.MakePersistent();
+
+    if (argumentCount > 2)
     {
-        AutoString fileContent;
-        char *fileNameNarrow = nullptr;
-        AutoString fileName;
-        AutoString scriptInjectType;
-        char fileNameBuffer[MAX_PATH];
-        bool isFile = true;
+        IfJsrtErrorSetGo(scriptInjectType.Initialize(arguments[2]));
 
-        IfJsrtErrorSetGo(fileContent.Initialize(arguments[1]));
-        // ExternalArrayBuffer Finalize will clean this up
-        // but only if we actually register a finalizecallback for this
-        fileContent.MakePersistent();
-
-        if (argumentCount > 2)
+        if (argumentCount > 3)
         {
-            IfJsrtErrorSetGo(scriptInjectType.Initialize(arguments[2]));
-
-            if (argumentCount > 3)
-            {
-                IfJsrtErrorSetGo(fileName.Initialize(arguments[3]));
-                fileNameNarrow = *fileName;
-            }
+            IfJsrtErrorSetGo(fileName.Initialize(arguments[3]));
+            fileNameNarrow = *fileName;
         }
+    }
 
-        if (!fileNameNarrow)
+    if (!fileNameNarrow)
+    {
+        isFile = false;
+        if (isSourceModule)
         {
-            isFile = false;
-            if (isSourceModule)
-            {
-                sprintf_s(fileNameBuffer, MAX_PATH, "moduleScript%i.js", (int)sourceContext);
-                fileNameNarrow = fileNameBuffer;
-            }
+            sprintf_s(fileNameBuffer, MAX_PATH, "moduleScript%i.js", (int)sourceContext);
+            fileNameNarrow = fileNameBuffer;
         }
+    }
 
-        if (*fileContent)
-        {
-            // TODO: This is CESU-8. How to tell the engine?
-            // TODO: How to handle this source (script) life time?
-            returnValue = LoadScript(callee, fileNameNarrow, *fileContent, *scriptInjectType ? *scriptInjectType : "self", isSourceModule, WScriptJsrt::FinalizeFree, isFile);
-        }
+    if (*fileContent)
+    {
+        // TODO: This is CESU-8. How to tell the engine?
+        // TODO: How to handle this source (script) life time?
+        returnValue = LoadScript(callee, fileNameNarrow, *fileContent, *scriptInjectType ? *scriptInjectType : "self", isSourceModule, WScriptJsrt::FinalizeFree, isFile);
     }
 
 Error:
@@ -398,25 +396,11 @@ Error:
 
 JsErrorCode WScriptJsrt::InitializeModuleInfo(JsValueRef specifier, JsModuleRecord moduleRecord)
 {
-    JsErrorCode errorCode = JsNoError;
-    errorCode = ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_FetchImportedModuleCallback, (void*)WScriptJsrt::FetchImportedModule);
+    IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_FetchImportedModuleCallback, WScriptJsrt::FetchImportedModule));
+    IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_FetchImportedModuleFromScriptCallback, WScriptJsrt::FetchImportedModuleFromScript));
+    IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_NotifyModuleReadyCallback, WScriptJsrt::NotifyModuleReadyCallback));
+    IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_HostDefined, specifier));
 
-    if (errorCode == JsNoError)
-    {
-        errorCode = ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_FetchImportedModuleFromScriptCallback, (void*)WScriptJsrt::FetchImportedModuleFromScript);
-
-        if (errorCode == JsNoError)
-        {
-            errorCode = ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_NotifyModuleReadyCallback, (void*)WScriptJsrt::NotifyModuleReadyCallback);
-
-            if (errorCode == JsNoError)
-            {
-                errorCode = ChakraRTInterface::JsSetModuleHostInfo(moduleRecord, JsModuleHostInfo_HostDefined, specifier);
-            }
-        }
-    }
-
-    IfJsrtErrorFailLogAndRetErrorCode(errorCode);
     return JsNoError;
 }
 
@@ -437,10 +421,10 @@ void WScriptJsrt::GetDir(LPCSTR fullPathNarrow, std::string *fullDirNarrow)
 
 JsErrorCode WScriptJsrt::LoadModuleFromString(LPCSTR fileName, LPCSTR fileContent, LPCSTR fullName, bool isFile)
 {
-    DWORD_PTR dwSourceCookie = WScriptJsrt::GetNextSourceContext();
+    JsSourceContext dwSourceCookie = WScriptJsrt::GetNextSourceContext();
     JsModuleRecord requestModule = JS_INVALID_REFERENCE;
-    LPCSTR moduleRecordKey = fullName ? fullName : fileName;
-    auto moduleRecordEntry = moduleRecordMap.find(std::string(moduleRecordKey));
+    std::string moduleRecordKey = fullName ? fullName : fileName;
+    auto moduleRecordEntry = moduleRecordMap.find(moduleRecordKey);
     JsErrorCode errorCode = JsNoError;
 
     // we need to create a new moduleRecord if the specifier (fileName) is not found;
@@ -448,32 +432,22 @@ JsErrorCode WScriptJsrt::LoadModuleFromString(LPCSTR fileName, LPCSTR fileConten
     if (moduleRecordEntry == moduleRecordMap.end())
     {
         JsValueRef specifier;
-        errorCode = ChakraRTInterface::JsCreateString(
-            fileName, strlen(fileName), &specifier);
-        if (errorCode == JsNoError)
-        {
-            errorCode = ChakraRTInterface::JsInitializeModuleRecord(
-                nullptr, specifier, &requestModule);
-        }
-        if (errorCode == JsNoError)
-        {
-            errorCode = InitializeModuleInfo(specifier, requestModule);
-        }
-        if (errorCode == JsNoError)
-        {
-            if (fullName)
-            {
-                GetDir(fullName, &moduleDirMap[requestModule]);
-            }
+        IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsCreateString(fileName, strlen(fileName), &specifier));
+        IfJsrtErrorFailLogAndRetErrorCode(ChakraRTInterface::JsInitializeModuleRecord(nullptr, specifier, &requestModule));
+        IfJsrtErrorFailLogAndRetErrorCode(InitializeModuleInfo(specifier, requestModule));
 
-            moduleRecordMap[std::string(moduleRecordKey)] = requestModule;
+        if (fullName)
+        {
+            GetDir(fullName, &moduleDirMap[requestModule]);
         }
+
+        moduleRecordMap[moduleRecordKey] = requestModule;
     }
     else
     {
         requestModule = moduleRecordEntry->second;
     }
-    IfJsrtErrorFailLogAndRetErrorCode(errorCode);
+
     JsValueRef errorObject = JS_INVALID_REFERENCE;
 
     // ParseModuleSource is sync, while additional fetch & evaluation are async.
@@ -487,9 +461,8 @@ JsErrorCode WScriptJsrt::LoadModuleFromString(LPCSTR fileName, LPCSTR fileConten
         IfJsrtErrorFail(errorCode, errorCode);
     }
  
-    errorCode = ChakraRTInterface::JsParseModuleSource(requestModule, dwSourceCookie, (LPBYTE)fileContent,
-        fileContentLength, JsParseModuleSourceFlags_DataIsUTF8, &errorObject);
-    if ((errorCode != JsNoError) && errorObject != JS_INVALID_REFERENCE && fileContent != nullptr && !HostConfigFlags::flags.IgnoreScriptErrorCode)
+    errorCode = ChakraRTInterface::JsParseModuleSource(requestModule, dwSourceCookie, (LPBYTE)fileContent, fileContentLength, JsParseModuleSourceFlags_DataIsUTF8, &errorObject);
+    if (errorCode != JsNoError && errorObject != JS_INVALID_REFERENCE && fileContent != nullptr && !HostConfigFlags::flags.IgnoreScriptErrorCode)
     {
         ChakraRTInterface::JsSetException(errorObject);
         return errorCode;
@@ -1871,8 +1844,7 @@ Error:
     return errorCode;
 }
 
-JsErrorCode WScriptJsrt::FetchImportedModuleHelper(JsModuleRecord referencingModule,
-    JsValueRef specifier, __out JsModuleRecord* dependentModuleRecord, LPCSTR refdir)
+JsErrorCode WScriptJsrt::FetchImportedModuleHelper(JsModuleRecord referencingModule, JsValueRef specifier, __out JsModuleRecord* dependentModuleRecord, LPCSTR refdir)
 {
     JsModuleRecord moduleRecord = JS_INVALID_REFERENCE;
     AutoString specifierStr;
@@ -1904,12 +1876,13 @@ JsErrorCode WScriptJsrt::FetchImportedModuleHelper(JsModuleRecord referencingMod
         GetDir(fullPath, &moduleDirMap[moduleRecord]);
         InitializeModuleInfo(specifier, moduleRecord);
         moduleRecordMap[std::string(fullPath)] = moduleRecord;
-        ModuleMessage* moduleMessage =
-            WScriptJsrt::ModuleMessage::Create(referencingModule, specifier);
+        ModuleMessage* moduleMessage = WScriptJsrt::ModuleMessage::Create(referencingModule, specifier);
+
         if (moduleMessage == nullptr)
         {
             return JsErrorOutOfMemory;
         }
+
         WScriptJsrt::PushMessage(moduleMessage);
         *dependentModuleRecord = moduleRecord;
     }
@@ -1920,8 +1893,7 @@ JsErrorCode WScriptJsrt::FetchImportedModuleHelper(JsModuleRecord referencingMod
 // we are not doing any translation, just treat the specifier as fileName.
 // While this call will come back directly from ParseModuleSource, the additional
 // task are treated as Promise that will be executed later.
-JsErrorCode WScriptJsrt::FetchImportedModule(_In_ JsModuleRecord referencingModule,
-    _In_ JsValueRef specifier, _Outptr_result_maybenull_ JsModuleRecord* dependentModuleRecord)
+JsErrorCode WScriptJsrt::FetchImportedModule(_In_ JsModuleRecord referencingModule, _In_ JsValueRef specifier, _Outptr_result_maybenull_ JsModuleRecord* dependentModuleRecord)
 {
     auto moduleDirEntry = moduleDirMap.find(referencingModule);
     if (moduleDirEntry != moduleDirMap.end())
