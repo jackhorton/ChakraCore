@@ -31,5 +31,3 @@ EXTERN_C BOOL WINAPI DllMain(HINSTANCE hmod, DWORD dwReason, PVOID pvReserved)
 #endif
     return TRUE;
 }
-
-static_assert(__LINE__ == 35, "You shouldn't add anything to this file or ChakraCoreDllFunc.cpp. Please consider again!");

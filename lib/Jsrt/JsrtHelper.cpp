@@ -19,24 +19,7 @@
 #endif
 
 #if !defined(_WIN32) || defined(CHAKRA_STATIC_LIBRARY)
-#include "Core/ConfigParser.h"
 #include "Base/ThreadBoundThreadContextManager.h"
-
-#ifdef CHAKRA_STATIC_LIBRARY
-bool ConfigParserAPI::FillConsoleTitle(__ecount(cchBufferSize) LPWSTR buffer, size_t cchBufferSize, __in LPWSTR moduleName)
-{
-    return false;
-}
-
-void ConfigParserAPI::DisplayInitialOutput(__in LPWSTR moduleName)
-{
-}
-
-LPCWSTR JsUtil::ExternalApi::GetFeatureKeyName()
-{
-    return _u("");
-}
-#endif // CHAKRA_STATIC_LIBRARY
 #endif
 
 JsrtCallbackState::JsrtCallbackState(ThreadContext* currentThreadContext)
@@ -84,12 +67,6 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
 }
 
 #if !defined(_WIN32) || defined(CHAKRA_STATIC_LIBRARY)
-    void ChakraBinaryAutoSystemInfoInit(AutoSystemInfo * autoSystemInfo)
-    {
-        autoSystemInfo->buildDateHash = JsUtil::CharacterBuffer<char>::StaticGetHashCode(__DATE__, _countof(__DATE__));
-        autoSystemInfo->buildTimeHash = JsUtil::CharacterBuffer<char>::StaticGetHashCode(__TIME__, _countof(__TIME__));
-    }
-
 #ifndef _WIN32
     static pthread_key_t s_threadLocalDummy;
 #endif
@@ -105,27 +82,6 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
     {
 #if !defined(_WIN32)
         pthread_key_create(&s_threadLocalDummy, DISPOSE_CHAKRA_CORE_THREAD);
-#endif
-
-    // setup the cleanup
-    // we do not track the main thread. When it exits do the cleanup below
-#ifdef CHAKRA_STATIC_LIBRARY
-    atexit([]() {
-        ThreadBoundThreadContextManager::DestroyContextAndEntryForCurrentThread();
-
-#ifdef DYNAMIC_PROFILE_STORAGE
-        DynamicProfileStorage::Uninitialize();
-#endif
-        JsrtRuntime::Uninitialize();
-
-        // thread-bound entrypoint should be able to get cleanup correctly, however tlsentry
-        // for current thread might be left behind if this thread was initialized.
-        ThreadContextTLSEntry::CleanupThread();
-        ThreadContextTLSEntry::CleanupProcess();
-    });
-#endif
-
-#ifndef _WIN32
         PAL_InitializeChakraCore();
 #endif
 
@@ -149,11 +105,7 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
 #ifdef VTUNE_PROFILING
         VTuneChakraProfile::Register();
 #endif
-#if PERFMAP_TRACE_ENABLED
-        PlatformAgnostic::PerfTrace::Register();
-#endif
 
-        ValueType::Initialize();
         ThreadContext::GlobalInitialize();
 
 #ifdef ENABLE_BASIC_TELEMETRY
@@ -186,9 +138,7 @@ void JsrtCallbackState::ObjectBeforeCallectCallbackWrapper(JsObjectBeforeCollect
         HeapAllocator::InitializeThread();
 #endif
 
-#ifndef _WIN32
         // put something into key to make sure destructor is going to be called
         pthread_setspecific(s_threadLocalDummy, malloc(1));
-#endif
     }
 #endif
